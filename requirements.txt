@@ -1,2 +1,4 @@
-Flask
+Flask>3
 gunicorn
+lxml
+requests
