@@ -1,10 +1,13 @@
+import os
 import re
 import unicodedata
 
 import requests
-from flask import Flask
+from flask import Flask, request
 from lxml.html import document_fromstring
 
+
+TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 
 def normaliza(texto):
   "Normaliza um texto retirando acentos, caracteres especiais e espaços desnecessários"
@@ -64,3 +67,29 @@ def estadao():
     </html>
     """
     return html
+
+
+@app.route("/telegram", methods=["POST"])
+def telegram_update():
+    # Primeiro, vamos preparar os dados que recebemos
+    update = request.json  # Maneira de pegar o conteúdo enviado pelo Telegram
+    url_envio_mensagem = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    first_name = update["message"]["from"]["first_name"]
+    text = update["message"]["text"]
+    chat_id = update["message"]["chat"]["id"]
+    normalizado = normaliza(text)
+    palavras = normalizado.split(" ")
+
+    # Agora, vamos interpretar o que foi enviado para responder
+    if text == "/start":
+        resposta = "Bem-vindo(a)"
+    elif "oi" in palavras or "ola" in palavras:  # Essa verificação irá dar match com "boi"
+        resposta = "Olá, como vai?"
+    else:
+        resposta = "Não entendi!"
+    mensagem = {"chat_id": chat_id, "text": resposta}
+    resultado = requests.post(url_envio_mensagem, data=mensagem)
+    # TODO: fazer algo se `not resultado.ok`
+
+    # Aqui devemos retornar algo para o Telegram, sinalizando que conseguimos receber o webhook sem problemas
+    return "ok"
